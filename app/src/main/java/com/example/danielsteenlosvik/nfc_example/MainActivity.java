@@ -106,6 +106,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void read(Intent intent){
 
+
         Parcelable[] rawMsgs = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
         NdefMessage msg = (NdefMessage) rawMsgs[0];
 

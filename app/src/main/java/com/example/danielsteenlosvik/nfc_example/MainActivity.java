@@ -31,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
 
     TextView mTextView;
     EditText userInput;
+
     Boolean writeMode = false;
 
     NfcAdapter mAdapter;
@@ -43,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
 
         mTextView = (TextView) findViewById(R.id.text);
         userInput = (EditText) findViewById(R.id.message);
+        userInput.setVisibility(View.INVISIBLE);
 
         mAdapter = NfcAdapter.getDefaultAdapter(this);
 
@@ -54,13 +56,15 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 if(writeMode){
                     writeButton.setText("Change To Write Mode");
-                    mTextView.setText("Reading..");
+                    mTextView.setText("Waiting for NFC-tag to read...");
                     writeMode = false;
+                    userInput.setVisibility(View.INVISIBLE);
                 }
                 else{
                     writeButton.setText("Change To Read Mode");
-                    mTextView.setText("Writing..");
+                    mTextView.setText("Input a message, than scan NFC-tag to write.");
                     writeMode = true;
+                    userInput.setVisibility(View.VISIBLE);
                 }
             }
         });
@@ -106,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
         NdefMessage msg = (NdefMessage) rawMsgs[0];
 
         byte status = msg.getRecords()[0].getPayload()[0];
+
         int enc = status & 0x80; // Bit mask 7th bit 1
         String encString = null;
         if (enc == 0)
@@ -133,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
             ndef.connect();
             ndef.writeNdefMessage(message);
             ndef.close();
-            mTextView.setText("Success");
+            mTextView.setText("Successfully wrote to tag");
         }
     }
 

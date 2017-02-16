@@ -102,27 +102,42 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
-
+    /*
+     =================== READ ===================
+     * @param intent
+     */
     private void read(Intent intent){
 
 
-        Parcelable[] rawMsgs = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
+        Parcelable[] rawMsgs = intent.getParcelableArrayExtra(
+                NfcAdapter.EXTRA_NDEF_MESSAGES // Gir oss en array av NDEF-Message på tag
+        );
+
+        // Vi bryr oss bare om første NDEF-Message...
         NdefMessage msg = (NdefMessage) rawMsgs[0];
 
+        // Vi sjekker kontrollbyte (første byte i payload)
         byte status = msg.getRecords()[0].getPayload()[0];
 
+
+        // Hva fanden skjer her
         int enc = status & 0x80; // Bit mask 7th bit 1
-        String encString = null;
+        String charset = null;
         if (enc == 0)
-            encString = "UTF-8";
+            charset = "UTF-8";
         else
-            encString = "UTF-16";
+            charset = "UTF-16";
 
         int ianaLength = status & 0x3F; // Bit mask bit 5..0
 
         try {
-            String content = new String(msg.getRecords()[0].getPayload(), ianaLength + 1, msg.getRecords()[0].getPayload().length - 1 - ianaLength, encString);
+            String content = new String(
+                    msg.getRecords()[0].getPayload(),                           // byte[]
+                    ianaLength + 1,                                             // offset
+                    msg.getRecords()[0].getPayload().length - 1 - ianaLength,   // length
+                    charset                                                     // charset
+            );
+
             mTextView.setText(content);
         }
         catch(Throwable t) {
@@ -130,11 +145,20 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
+     /*
+     =================== WRITE ===================
+     */
+
     private void write(String text, Tag tag) throws IOException, FormatException {
 
+        // Lager et nytt record for å legge på NFC-tag
         NdefRecord[] records = { createRecord(text) };
+        // Innkapsler alle NDEF-Records i NDEF-Message
         NdefMessage message = new NdefMessage(records);
+
         if(tag != null){
+
             Ndef ndef = Ndef.get(tag);
             ndef.connect();
             ndef.writeNdefMessage(message);
@@ -145,21 +169,32 @@ public class MainActivity extends AppCompatActivity {
 
     private NdefRecord createRecord(String text) throws UnsupportedEncodingException {
 
-        //create the message in according with the standard
-        String lang = "en";
+
+        String lang = "no";
         byte[] textBytes = text.getBytes();
         byte[] langBytes = lang.getBytes("US-ASCII");
         int langLength = langBytes.length;
         int textLength = textBytes.length;
 
+        // Byte-array med payload. Allokkerer plass for språk, selve innhold, samt en kontrollbyte i starten
         byte[] payload = new byte[1 + langLength + textLength];
+
+        // Kontrollbyte
         payload[0] = (byte) langLength;
 
-        // copy langbytes and textbytes into payload
+        // Kopierer bytes for språk til payload
         System.arraycopy(langBytes, 0, payload, 1, langLength);
+
+        // Kopierer bytes for beskjeden til payload
         System.arraycopy(textBytes, 0, payload, 1 + langLength, textLength);
 
-        NdefRecord recordNFC = new NdefRecord(NdefRecord.TNF_WELL_KNOWN, NdefRecord.RTD_TEXT, new byte[0], payload);
+        // Vi har nå det vi trenger for å lage en NDEF-Record!
+        NdefRecord recordNFC = new NdefRecord(
+                NdefRecord.TNF_WELL_KNOWN,      // indikerer at dette er en "velkjent" RTD (Record Type Definition)-type
+                NdefRecord.RTD_TEXT,            // RTD Tekst er mappet til MIME-typen "text/plain".
+                new byte[0],                    // Tom byte-array for id (vil ikke bli brukt)
+                payload                         // Faktisk beskjed som legges inn i NDEF-Record
+        );
         return recordNFC;
     }
 }

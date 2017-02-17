@@ -120,21 +120,29 @@ public class MainActivity extends AppCompatActivity {
         byte status = msg.getRecords()[0].getPayload()[0];
 
 
-        // Hva fanden skjer her
-        int enc = status & 0x80; // Bit mask 7th bit 1
+        // &-operasjonen vil gi sammenligne første byte i payload med 0x80 = 128
+        // Hvis operasjonen gir 0 så betyr det at tegnsettet er utf8. Hvis ikke må
+        // det være utf16 som bruker 16bit for hvert tegn
+        int encoding = status & 0x80; // Bit mask 7th bit 1
+         // 0x80 								= 1000 0000
+         // Dette betyr at hvis 7. bit er satt så kan det ikke være UTF-8, siden disse bitsene
+         // alltid er 0 i utf8
         String charset = null;
-        if (enc == 0)
+        if (encoding == 0)
             charset = "UTF-8";
         else
             charset = "UTF-16";
 
         int ianaLength = status & 0x3F; // Bit mask bit 5..0
+        // 0x3f =                               = 0011 1111
+        // F.eks status ==2                     = 0000 0010
+        // Resultat av &-operasjon              = 0000 0010 = 2
 
         try {
             String content = new String(
                     msg.getRecords()[0].getPayload(),                           // byte[]
                     ianaLength + 1,                                             // offset
-                    msg.getRecords()[0].getPayload().length - 1 - ianaLength,   // length
+                    msg.getRecords()[0].getPayload().length - 1 - ianaLength,   // length = lengden til faktisk payload minus kontrollbyte og lengde på språkkode.
                     charset                                                     // charset
             );
 

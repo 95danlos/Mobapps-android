@@ -34,7 +34,11 @@ public class MainActivity extends AppCompatActivity {
 
     Boolean writeMode = false;
 
+    // Nfcadapter
     NfcAdapter mAdapter;
+
+
+
     PendingIntent mPendingIntent;
 
     @Override
@@ -48,8 +52,27 @@ public class MainActivity extends AppCompatActivity {
 
         mAdapter = NfcAdapter.getDefaultAdapter(this);
 
-        mPendingIntent = PendingIntent.getActivity(this, 0, new Intent(this,
-                getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
+
+        /*
+
+        // By giving a PendingIntent to another application,
+        you are granting it the right to perform the operation
+        you have specified as if the other application was yourself
+
+        PendingIntent getActivity (
+                Context context,
+                int requestCode,
+                Intent intent,
+                int flags)
+         */
+        mPendingIntent = PendingIntent.getActivity(
+                this,         // Context
+                0,            // Requestcode
+                new Intent(   // Intent
+                        this,
+                getClass()
+                ).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),  // The activity will not be launched if it is already running at the top of the history stack.
+                0);
 
         final Button writeButton = (Button) findViewById(R.id.write);
         writeButton.setOnClickListener(new Button.OnClickListener() {
@@ -75,17 +98,31 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        mAdapter.enableForegroundDispatch(this, mPendingIntent, null, null);
+        // Gir denne aktivteten prioritet i behandling av NFC-tags
+
+        mAdapter.enableForegroundDispatch(
+                this,           // activity
+                mPendingIntent, // PendingIntent
+                null,           // IntentFilters [], null = allways dispatch
+                null            // null på begge = acts a wildcard, will receive all tags via ACTION_TAG_DISCOVERED
+        );
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         if(mAdapter != null) {
+
+        // Fjerner foregrounddispatch ved pause
             mAdapter.disableForegroundDispatch(this);
         }
     }
 
+
+    /**
+     * Siden vi har satt FLAG_ACTIVITY_SINGLE_TOP kan vi hooke dette callbacket når NFC-tag scannes
+     * @param intent
+     */
     @Override
     protected void onNewIntent(Intent intent){
         Tag mytag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
@@ -125,6 +162,8 @@ public class MainActivity extends AppCompatActivity {
         // det være utf16 som bruker 16bit for hvert tegn
         int encoding = status & 0x80; // Bit mask 7th bit 1
          // 0x80 								= 1000 0000
+
+
          // Dette betyr at hvis 7. bit er satt så kan det ikke være UTF-8, siden disse bitsene
          // alltid er 0 i utf8
         String charset = null;
